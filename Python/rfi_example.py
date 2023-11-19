@@ -23,24 +23,28 @@ savepath = ''
 # datasets to use
 data = pd.read_csv(savepath + 'extrapolation.csv')
 
-data = data[['x1', 'x2', 'x3', 'x4', 'x5', 'y']]
+data = data[['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'y']]
 ntrain = int(0.7 * data.shape[0])
 
-xcolumns = ['x1', 'x2', 'x3', 'x4', 'x5']
+xcolumns = ['x1', 'x2', 'x3', 'x4', 'x5', 'x6']
 ycolumn = ['y']
 df_train, df_test = data.iloc[0:ntrain,], data.iloc[ntrain:,]
 X_train, y_train = df_train[xcolumns], df_train[ycolumn]
 X_test, y_test = df_test[xcolumns], df_test[ycolumn]
 
 # fit models
-
 mod1.fit(X_train, y_train)
+lasso = linear_model.LassoCV()
+lasso.fit(X_train, y_train)
+
 # mod1.coef_[0, 0] = 0.3
 # mod1.coef_[0, 1] = -0.3
 # mod1.coef_[0, 2] = 0
 # mod1.coef_[0, 3] = 1
 # mod1.coef_[0, 4] = 0
+mod1.coef_[0, 5] = 0
 
+"""
 scoring = [mean_squared_error, r2_score]
 names = ['MSE', 'r2_score']
 models = [mod1]
@@ -52,6 +56,8 @@ for kk in range(len(models)):
     for jj in np.arange(len(names)):
         print('{}: {}'.format(names[jj],
                               scoring[jj](y_test, model.predict(X_test))))
+"""
+
 
 # explain model
 
@@ -93,4 +99,4 @@ df_rfi['type'] = 'rfi'
 df_res = pd.concat([df_pfi, df_rfi, df_cfi]).reset_index()
 df_res.to_csv(savepath+'df_res.csv')
 
-print(mod1.coef_, mod1.intercept_)
+print(mod1.coef_, mod1.intercept_, lasso.coef_, lasso.intercept_)

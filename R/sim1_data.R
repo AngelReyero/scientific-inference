@@ -15,9 +15,10 @@ x2 = x1 + rnorm(n, sd=0.001)
 x3 = rnorm(n)
 x4 = x3 + rnorm(n, sd=0.01)
 x5 = rnorm(n)
-y = x4 + rnorm(n, sd=0.1)
+x6 = rnorm(n)
+y = x4 + x6 + rnorm(n, sd=0.1)
 
-data = data.frame(x1=x1, x2=x2, x3=x3, x4=x4, x5=x5, y=y)
+data = data.frame(x1=x1, x2=x2, x3=x3, x4=x4, x5=x5, x6=x6, y=y)
 maxs = apply(data, 2, function(x) max(abs(x)))
 for(i in 1:ncol(data)) data[,i] = data[,i]/maxs[i]
 
@@ -37,4 +38,4 @@ imp_test <- FeatureImp$new(predictor_test,loss = "mae", n.repetitions = 10, comp
 p_pfi = plot(imp_test)
 p_pfi
 
-write.csv(data, file="../Python/extrapolation.csv")
+write.csv(data, file="Python/extrapolation.csv")

@@ -35,10 +35,10 @@ reg_lin = linear_model.LinearRegression()
 # datasets to use
 data = pd.read_csv(savepath + 'extrapolation.csv')
 
-data = data[['x1', 'x2', 'x3', 'x4', 'x5', 'y']]
+data = data[['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'y']]
 ntrain = int(0.7 * data.shape[0])
 
-xcolumns = ['x1', 'x2', 'x3', 'x4', 'x5']
+xcolumns = ['x1', 'x2', 'x3', 'x4', 'x5', 'x6']
 ycolumn = ['y']
 df_train, df_test = data.iloc[0:ntrain,], data.iloc[ntrain:,]
 X_train, y_train = df_train[xcolumns], df_train[ycolumn]
@@ -67,7 +67,7 @@ for kk in range(len(models)):
 
 reg_lin.fit(X_train, y_train)
 # reg_lin.coef_[0, 1] = reg_lin.coef_[0, 1] + 0.05
-# reg_lin.coef_[0, 2] = reg_lin.coef_[0, 2] - 0.05
+reg_lin.coef_[0, 5] = 0
 
 scoring = [mean_squared_error, r2_score]
 names = ['MSE', 'r2_score']

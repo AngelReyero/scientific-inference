@@ -28,23 +28,23 @@ colnames(df)[3] = "importance"
 df$X = length(df$importance):1
 
 # the following creates relative values (relative to most important feat.)
-# df_max = df %>%
-#   group_by(type) %>%
-#   filter(abs(importance) == max(abs(importance)))
-# for(typ in df_max$type){
-#   df$importance[df$type == typ] = df$importance[df$type == typ]/df_max$importance[df_max$type == typ]
-#   df$q.05[df$type == typ] = df$q.05[df$type == typ]/df_max$importance[df_max$type == typ]
-#   df$q.95[df$type == typ] = df$q.95[df$type == typ]/df_max$importance[df_max$type == typ]
-# }
+df_max = df %>%
+  group_by(type) %>%
+  filter(abs(importance) == max(abs(importance)))
+for(typ in df_max$type){
+  df$importance[df$type == typ] = df$importance[df$type == typ]/df_max$importance[df_max$type == typ]
+  df$q.05[df$type == typ] = df$q.05[df$type == typ]/df_max$importance[df_max$type == typ]
+  df$q.95[df$type == typ] = df$q.95[df$type == typ]/df_max$importance[df_max$type == typ]
+}
 
 p = ggplot(data=df, aes(x=reorder(type, X), y=importance, fill=reorder(feature, X))) +
-  geom_bar(stat='identity', position=position_dodge()) +
-  geom_errorbar(aes(ymin=q.05, ymax=q.95), width=.2, position=position_dodge(.9))
+  geom_bar(stat='identity', position=position_dodge()) #+
+  #geom_errorbar(aes(ymin=q.05, ymax=q.95), width=.2, position=position_dodge(.9))
 
 p = p + labs(x='IML technique', y='importance', fill='feature')
 # comment out scale_y_continuous in the following if you want "normal" scales
-p + coord_flip() + scale_y_continuous(trans="S_sqrt",breaks=seq(-0.1,0.5,0.05))+
-  scale_fill_discrete(breaks=c('x1', 'x2', 'x3', 'x4', 'x5'))
+p + coord_flip() + #scale_y_continuous(trans="S_sqrt",breaks=seq(-0.1,0.5,0.05))+
+  scale_fill_discrete(breaks=c('x1', 'x2', 'x3', 'x4', 'x5', 'x6'))
 
 # save absolute values
 ggsave('../figures/cfi_pfi_SAGEvalueFunc_orig.pdf', width=6, height=5)
