@@ -43,7 +43,7 @@ mod1.fit(X_train, y_train)
 scoring = [mean_squared_error, r2_score]
 names = ['MSE', 'r2_score']
 models = [mod1]
-m_names = ['Lasso']
+m_names = ['LinearRegression']
 
 for kk in range(len(models)):
     model = models[kk]

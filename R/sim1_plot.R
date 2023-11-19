@@ -25,24 +25,30 @@ df3 = read.csv(paste0(lp, 'df_res3.csv')) # loco
 df5 = read.csv(paste0(lp, 'df_res_SAGE.csv')) # SAGE
 df = rbind(df1[c(1:5,11:15),], df1[6:10,], df3, df2[c(11:15,1:5),], df2[c(16:20,6:10),], df5)
 colnames(df)[3] = "importance"
-
 df$X = length(df$importance):1
-df_max = df %>%
-  group_by(type) %>%
-  filter(abs(importance) == max(abs(importance)))
-for(typ in df_max$type){
-  df$importance[df$type == typ] = df$importance[df$type == typ]#/df_max$importance[df_max$type == typ]
-}
+
+# the following creates relative values (relative to most important feat.)
+# df_max = df %>%
+#   group_by(type) %>%
+#   filter(abs(importance) == max(abs(importance)))
+# for(typ in df_max$type){
+#   df$importance[df$type == typ] = df$importance[df$type == typ]/df_max$importance[df_max$type == typ]
+#   df$q.05[df$type == typ] = df$q.05[df$type == typ]/df_max$importance[df_max$type == typ]
+#   df$q.95[df$type == typ] = df$q.95[df$type == typ]/df_max$importance[df_max$type == typ]
+# }
 
 p = ggplot(data=df, aes(x=reorder(type, X), y=importance, fill=reorder(feature, X))) +
   geom_bar(stat='identity', position=position_dodge()) +
   geom_errorbar(aes(ymin=q.05, ymax=q.95), width=.2, position=position_dodge(.9))
 
 p = p + labs(x='IML technique', y='importance', fill='feature')
-# delete scale_y_continuous in the following if you want "normal" scales
+# comment out scale_y_continuous in the following if you want "normal" scales
 p + coord_flip() + scale_y_continuous(trans="S_sqrt",breaks=seq(-0.1,0.5,0.05))+
   scale_fill_discrete(breaks=c('x1', 'x2', 'x3', 'x4', 'x5'))
 
+# save absolute values
 ggsave('../figures/cfi_pfi_SAGEvalueFunc_orig.pdf', width=6, height=5)
+
+# save relative values
 # ggsave('../figures/cfi_pfi_SAGEvalueFunc.pdf', width=6, height=5)
 
