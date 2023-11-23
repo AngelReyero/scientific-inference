@@ -24,6 +24,7 @@ savepath = ''
 data = pd.read_csv(savepath + 'extrapolation.csv')
 
 data = data[['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'y']]
+data_model = data[['x1', 'x2', 'x3', 'x4', 'x5', 'y']]
 ntrain = int(0.7 * data.shape[0])
 
 xcolumns = ['x1', 'x2', 'x3', 'x4', 'x5', 'x6']
@@ -33,16 +34,20 @@ X_train, y_train = df_train[xcolumns], df_train[ycolumn]
 X_test, y_test = df_test[xcolumns], df_test[ycolumn]
 
 # fit models
-mod1.fit(X_train, y_train)
+xcolumns_model = ['x1', 'x2', 'x3', 'x4', 'x5']
+df_train_model = data.iloc[0:ntrain,]
+X_train_model, y_train_model = df_train_model[xcolumns_model], df_train_model[ycolumn]
+
+mod1.fit(X_train_model, y_train_model)
 lasso = linear_model.LassoCV()
-lasso.fit(X_train, y_train)
+lasso.fit(X_train_model, y_train_model)
 
 # mod1.coef_[0, 0] = 0.3
 # mod1.coef_[0, 1] = -0.3
 # mod1.coef_[0, 2] = 0
 # mod1.coef_[0, 3] = 1
 # mod1.coef_[0, 4] = 0
-mod1.coef_[0, 5] = 0
+# mod1.coef_[0, 5] = 0
 
 """
 scoring = [mean_squared_error, r2_score]
