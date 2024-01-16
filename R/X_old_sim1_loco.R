@@ -9,8 +9,8 @@ theme_set(theme_bw())
 
 set.seed(123)
 
-data = read.csv("../Python/extrapolation.csv")
-lp = '../Python/'
+data = read.csv("Python/extrapolation.csv")
+lp = 'Python/'
 
 df <- data[ , -which(names(data) == "X")]
 
@@ -23,12 +23,13 @@ test_data <- df[-train, ]
 
 ### Fit a linear model using the training data.
 model <- lm(y ~ ., data = training_data)
-model$coefficients[7] <- 0
+model$coefficients[7] <- model$coefficients[7] + model$coefficients[8]
+model$coefficients[8] <- 0
 ### Fit LASSO
 # model = glmnet(training_data[,1:5], training_data$y, alpha = 1, lambda = 0)
 
 ### Assess the MSE on the test data set.
-preds <- predict(model, newdata = test_data[,1:6])
+preds <- predict(model, newdata = test_data[,1:7])
 mse <- mean((test_data$y - preds) ^ 2)
 print(paste("MSE:", mse))
 
@@ -63,8 +64,8 @@ n_times <- function(func, n, return_raw, ...) {
   results <- t(sapply(1:n, function(i) func(...)))
 
   # quantiles
-  #q.05 <- apply(results , 2 , quantile , probs = c(0.05) , na.rm = TRUE )
-  #q.95 <- apply(results , 2 , quantile , probs = c(0.95) , na.rm = TRUE )
+  q.05 <- apply(results , 2 , quantile , probs = c(0.05) , na.rm = TRUE )
+  q.95 <- apply(results , 2 , quantile , probs = c(0.95) , na.rm = TRUE )
 
   ### Return the mean_fi, the std_fi and if wanted the raw results contained in a list.
   list(colMeans(results), apply(results, 2, sd), if (return_raw) results)
@@ -79,11 +80,11 @@ y_test <- test_data[ , which(names(test_data) == "y")]
 barplot_results <- function(results) {
   ### Create a data.frame to be able to use ggplot2 appropriately.
   results_mean_std <- data.frame(results[1], results[2])
-  rownames(results_mean_std) <- c('x1', 'x2', 'x3', 'x4', 'x5', 'x6')
+  rownames(results_mean_std) <- c('x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7')
   colnames(results_mean_std) <- c('col_means', 'col_stds')
 
   ### Use ggplot2 to create the barplot.
-  ggplot(cbind(Features = rownames(results_mean_std), results_mean_std[1:6, ]),
+  ggplot(cbind(Features = rownames(results_mean_std), results_mean_std[1:7, ]),
          aes(x = reorder(Features, results_mean_std$col_means),
              y = results_mean_std$col_means)) +
     ### Plot the mean value bars.
@@ -104,14 +105,14 @@ loco <- function(fname, original_model, X_test, y_test, original_df, y_name) {
   remainder <- original_df[colnames(original_df) != fname]
 
   ### The usual training and testing split (with 70% training data).
-  set.seed(100)
+  #set.seed(100)
   inds <- sample(nrow(remainder), 0.7 * nrow(remainder))
   new_training_data <- remainder[inds, ]
   new_test_data <- remainder[-inds, ]
 
   ### Get the features and the target.
   loco_X_test <- new_test_data[ , colnames(new_test_data) != y_name]
-  loco_y_test <- new_test_data[ , y_name]
+  loco_y_test <- new_test_data[ y_name]
 
   ### Generate the formula object we will give to the lm()-function.
   outcome <- names(new_training_data[y_name])
@@ -127,7 +128,7 @@ loco <- function(fname, original_model, X_test, y_test, original_df, y_name) {
 
   ### Get the MSE for the model without the feature of interest.
   predict_for_loco <- predict(new_model, loco_X_test)
-  loco_mse <- mean((loco_y_test - predict_for_loco) ^ 2)
+  loco_mse <- mean((loco_y_test$y - predict_for_loco) ^ 2)
 
   ### The performance is given by the differences of the MSEs.
   loco_mse - original_mse
@@ -141,7 +142,7 @@ loco_naive <- function(original_df, original_model, X_test, y_test, y_name, ...)
 
 model$coef
 
-loco_results <- n_times(fi, 10, TRUE, loco, model, X_test, y_test, df, 'y')
+loco_results <- n_times(fi, 100, TRUE, loco, model, X_test, y_test, df, 'y')
 #loco_results <- n_times(fi, 10, FALSE, loco, model, as.matrix(X_test), y_test, df, 'y')
 
 p = barplot_results(loco_results)
@@ -158,6 +159,7 @@ write.csv(res3, paste0(lp, 'df_res3.csv'))
 
 
 ### LOCI ----------------------------------------------------------------------
+# no updated
 
 loci <- function(fname, original_model, X_test, y_test, original_df, y_name) {
   ### In LOCI the risk of the "mean model" is compared with a model only
