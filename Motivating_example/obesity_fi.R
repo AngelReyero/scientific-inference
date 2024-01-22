@@ -225,7 +225,7 @@ barplot_top6 <- function(results, feature_names) {
   rownames(results_mean_std) <- feature_names
   colnames(results_mean_std) <- c('col_means', 'col_stds')
   d = cbind(Features = rownames(results_mean_std), results_mean_std[1:length(feature_names), ])
-  d = d[order(abs(results_mean_std$col_means)),]
+  d = d[order(results_mean_std$col_means),]
   d = d[(nrow(d)-5):nrow(d),]
   ### Use ggplot2 to create the barplot.
   ggplot(d,
