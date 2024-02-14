@@ -1,4 +1,4 @@
-library("mlr3")
+library(mlr3)
 library("mlr3oml")
 library("mlr3verse")
 library(mlr3pipelines)
@@ -6,133 +6,81 @@ library(mlr3benchmark)
 library(mlr3extralearners)
 library("ggplot2")
 library("iml")
-library("dplyr")
-library("mvtnorm")
-library("matrixStats")
-library(checkmate)
-library(data.table)
-library("coda")
-library(purrr)
-library(stats)
-library(Metrics)
-# source("utils.R") # Conditional sampler
+library(future)
+
 theme_set(theme_bw())
 
-set.seed(123)
 # setwd("~/paper_2022_feature_importance_guide/Motivating_example")
 
-#### Data ---------------------------------------------------------------------
-obesity_data = read_arff("data/ObesityDataSet_raw_and_data_sinthetic.arff")
-## Variables
-# Gender
-# Age
-# Height
-# Weight
-# family_history_with_overweight
-# FAVC (frequent high caloric food)
-# FCVC (amount of vegetables per meal)
-# NCP (how many main meals a day)
-# CAEC (eating any food between meals)
-# SMOKE (smoking)
-# CH2O (how much water someone's drinking)
-# SCC (monitoring the calories daily)
-# FAF (physical activity)
-# TUE (time spend on technological devices)
-# CALC (frequency of drinking alcohol)
-# MTRANS (transportation method)
-# NObeyesdad (TARGET)
+### Preprocessing ##############################################################
+bike = read.csv("data/bike_sharing_dataset/day.csv", stringsAsFactors = FALSE)
+bike$weekday = factor(bike$weekday, levels = 0:6, labels = c('SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'))
+bike$holiday = factor(bike$holiday, levels = c(0,1), labels = c('NO', 'YES'))
+bike$workingday = factor(bike$workingday, levels = c(0,1), labels = c('NO', 'YES'))
+bike$season = factor(bike$season, levels = 1:4, labels = c('WINTER', 'SPRING', 'SUMMER', 'FALL'))
+bike$weathersit = factor(bike$weathersit, levels = 1:3, labels = c('CLEAR', 'MISTY/CLOUDY', 'SNOW/RAIN+STORM'))
+bike$mnth = factor(bike$mnth, levels = 1:12, labels = c('JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'))
+bike$yr = factor(bike$yr, levels = 0:1, labels = c('2011', "2012"))
+# denormalize weather features:
+# temp : Normalized temperature in Celsius. The values are derived via (t-t_min)/(t_max-t_min), t_min=-8, t_max=+39 (only in hourly scale)
+bike$temp = bike$temp * (39 - (-8)) + (-8)
+# atemp: Normalized feeling temperature in Celsius. The values are derived via (t-t_min)/(t_max-t_min), t_min=-16, t_max=+50 (only in hourly scale)
+bike$atemp = bike$atemp * (50 - (16)) + (16)
+#windspeed: Normalized wind speed. The values are divided to 67 (max)
+bike$windspeed = 67 * bike$windspeed
+#hum: Normalized humidity. The values are divided to 100 (max)
+bike$hum = 100 * bike$hum
+# Account for trend
+bike$days_since_2011 = as.numeric(as.Date(bike$dteday)-min(as.Date(bike$dteday)))
+# remove features
+bike$instant = bike$atemp = bike$dteday = bike$casual = bike$registered = NULL
 
-## Obesity
-# Underweight Less than 18.5
-# Normal 18.5 to 24.9
-# Overweight 25.0 to 29.9
-# Obesity I 30.0 to 34.9
-# Obesity II 35.0 to 39.9
-# Obesity III Higher than 40
+# library(ggplot2)
+# ggplot(data = bike, aes(x = as.factor(hr), y = cnt)) + geom_boxplot(varwidth = T)
+save(bike, file = "data/bike.RData")
 
-# Check for duplicates
-sum(duplicated(obesity_data))
-obesity_data = distinct(obesity_data)
 
-# age
-summary(obesity_data$Age)
-# different calculation of obesity for children. Let's just use data for people above 18
-obesity_data = filter(obesity_data, Age >= 19)
+### ML model estimation ########################################################
+load("data/bike.RData")
 
-# bmi
-bmi = obesity_data$Weight/(obesity_data$Height^2)
-summary(bmi)
-# no unrealistic BMI values
+set.seed(123)
 
-# plot
-p = ggplot(data = obesity_data, aes(x = Height, y = Weight, color = NObeyesdad)) + geom_point()
-ggsave("figures/overview.pdf", p, width = 6, height = 4)
-
-### Transform in a binary problem
-levels(obesity_data$NObeyesdad)
-# "Obesity_Type_I", "Obesity_Type_II", "Obesity_Type_III" => 1
-# "Insufficient_Weight", "Normal_Weight", "Overweight_Level_I", "Overweight_Level_II" => 0
-obesity_data$obese = obesity_data$NObeyesdad %in% c("Obesity_Type_I", "Obesity_Type_II", "Obesity_Type_III")
-obesity_data = select(obesity_data, -NObeyesdad)
-table(obesity_data$obese)
-
-# when svm is used, no factors are allowed
-for(i in 1:length(obesity_data)){
-  if(class(obesity_data[[i]]) == "factor") obesity_data[[i]] = as.numeric(obesity_data[[i]])
-}
-
-# rename family_history_with_overweight in obese_hist
-colnames(obesity_data)[colnames(obesity_data)=="family_history_with_overweight"] = "obese_hist"
-
-# save
-save(obesity_data, file = "data/obesity_data.RData")
-
-#### Model --------------------------------------------------------------------
-# train/test split for model interpretation
-n_row = dim(obesity_data)[1]
-train_set  = sample(n_row, 0.8 * n_row)
-test_set = setdiff(seq_len(n_row), train_set )
-
-# data now just contains training data
-data = obesity_data[train_set,]
+# Parallelization
+plan("multisession")
 
 # Task
-task = as_task_classif(data, target = "obese", id = "obesity")
+task_bike = as_task_regr(bike, target = "cnt")
+split = partition(task_bike)
 
 # Base-Learner
-base_learner = lrn("classif.featureless", predict_type = "prob")
+base_learner = lrn("regr.featureless")
 
 # Learner
-# learner = lrn("classif.ranger", predict_type = "prob", # alternative: "response",
-#               mtry        = to_tune(1, 16, logscale = TRUE),
-#               num.trees   = to_tune(1, 1000, logscale = TRUE),
-#               num.threads = to_tune(1, 10, logscale = TRUE),
-#               importance  = "permutation"
-# )
-learner = lrn("classif.svm", predict_type = "prob", # alternative: "response",
-              cachesize   = to_tune(30, 50, logscale = FALSE),
-              gamma       = to_tune(1, 10, logscale = TRUE),
-              cost        = to_tune(1, 10, logscale = TRUE),
-              type        = "C-classification",
-              kernel      = "radial"
+learner = lrn("regr.ranger",
+              mtry            = to_tune(1, 10, logscale = TRUE),
+              num.trees       = 500,
+              importance      = "none",
+              max.depth       = to_tune(100, 150, logscale = TRUE),
+              min.node.size   = to_tune(1, 5, logscale = FALSE)
 )
+# learner$fallback = lrn("regr.featureless")
 
 # Auto-Tuner
 at = auto_tuner(
   tuner = tnr("random_search"),
   learner = learner,
-  resampling = rsmp("repeated_cv", folds = 10, repeats = 4),
-  measure = msr("classif.ce"),
-  terminator = trm("evals", n_evals= 5),
+  resampling = rsmp("repeated_cv", folds = 5, repeats = 2),
+  measure = msr("regr.mse"),
+  terminator = trm("evals", n_evals= 200),
 )
 
 # Outer resampling (-> Nested resampling)
-outer_resampling = rsmp("repeated_cv", folds = 10, repeats = 4)
+outer_resampling = rsmp("repeated_cv", folds = 5, repeats = 2)
 
 # Compute
-base_rr = resample(task, base_learner, outer_resampling, store_models = TRUE)
+base_rr = resample(task_bike$filter(split$train), base_learner, outer_resampling, store_models = TRUE)
 start_time = Sys.time()
-rr = resample(task, at, outer_resampling, store_models = TRUE)
+rr = resample(task_bike$filter(split$train), at, outer_resampling, store_models = TRUE)
 duration = Sys.time()-start_time
 
 # Evaluation
@@ -148,43 +96,20 @@ base_rr$aggregate()
 rr$aggregate()
 
 # Optimal Model
-# minimize classif_ce
-ind = which.min(rr$score()$classif.ce)
+# minimize performance measure
+ind = which.min(rr$score()$regr.mse)
 tuned_model = outer_learners[[ind]]
 
 # Save / load
-save(obesity_data,train_set,test_set,tuned_model,duration, file = "trained_model.RData")
-# also good to save: task,learner,at,outer_resampling,rr
+save(base_rr,rr,learner,at,tuned_model,duration,split, file = "trained_model.RData")
+# outer_resampling
+
 # load("trained_model.RData")
 
-#### Interpretation ------------------------------------------------------------
 
-##### Feature Effects
-data = obesity_data[test_set,]
-x = data[,!"obese"]
-model = Predictor$new(tuned_model, data = x, y = data$obese)
+### Interpretation #############################################################
 
-#str(data)
-num_feat = c()
-
-for(i in 1:length(names(data))) num_feat[i] = class(data[[i]]) == "numeric"
-num_features = names(data)[num_feat]
-
-effect_pdp_ice = FeatureEffects$new(model, method = "pdp+ice")
-png(file="figures/feature_effects_pdp+ice_test.png", width=1500, height=1000)
-plot(effect_pdp_ice, features = num_features)
-dev.off()
-
-effect_ale = FeatureEffects$new(model) # ale is default
-png(file="figures/feature_effects_ale_test.png", width=1500, height=1000)
-plot(effect_ale, features = num_features)
-dev.off()
-# Weight strongest effect, rest nearly no effect (age and height little effect)
-
-
-##### Feature Importance (self made)
-
-### fi_fname_func for all features in X_test.
+## fi_fname_func for all features in X_test.
 fi <- function(fi_fname_func, ...) {
   ### Iterate over all features in X_test and calculate their single feature PFI score.
   unlist(lapply(colnames(X_test), fi_fname_func, ...))
@@ -211,12 +136,12 @@ barplot_results <- function(results, feature_names) {
              y = results_mean_std$col_means)) +
     ### Plot the mean value bars.
     geom_bar(stat = "identity", fill = "steelblue") #+
-    ### Plot the standard deviations.
-    # geom_errorbar(aes(ymin = results_mean_std$col_means - results_mean_std$col_stds,
-    #                   ymax = results_mean_std$col_means + results_mean_std$col_stds),
-    #               width = .1) #+
-    ### Set the labels correctly.
-    #labs(y = "Mean Value", x = "Features")
+  ### Plot the standard deviations.
+  # geom_errorbar(aes(ymin = results_mean_std$col_means - results_mean_std$col_stds,
+  #                   ymax = results_mean_std$col_means + results_mean_std$col_stds),
+  #               width = .1) #+
+  ### Set the labels correctly.
+  #labs(y = "Mean Value", x = "Features")
 }
 
 barplot_top6 <- function(results, feature_names) {
@@ -250,8 +175,8 @@ pfi_fname <- function(fname, model, X_test, y_test, metric = "mse") {
   X_test_perm[[fname]] <- sample(X_test_perm[[fname]])
 
   ### Predict on the original data situation as well as on the permuted one.
-  preds_original <- model$predict(X_test)[[2]]
-  preds_perm <- model$predict(X_test_perm)[[2]]
+  preds_original <- predict(model, X_test)
+  preds_perm <- predict(model,X_test_perm)
 
   if(metric == "mse"){
     ### Get the MSE for the model with all features.
@@ -296,11 +221,11 @@ loco <- function(fname, original_model, X_test, y_test, original_df, y_name, met
   f <- as.formula(paste(outcome, paste(variables, collapse = " + "), sep = " ~ "))
 
   ### Train the OLS model.
-  new_model <- glm(f, family="binomial", data = new_training_data) ### change here if y is not binomial
+  new_model <- glm(f, family="gaussian", data = new_training_data) ### change here if y is not binomial
 
   ### predict
-  preds_for_original <- original_model$predict(X_test)[[2]]
-  predict_for_loco <- predict(new_model, loco_X_test, type = "response")
+  preds_for_original <- predict(original_model,X_test)
+  predict_for_loco <- predict(new_model, loco_X_test)
 
   if(metric == "mse"){
     ### Get the MSE for the model with all features.
@@ -326,24 +251,22 @@ loco <- function(fname, original_model, X_test, y_test, original_df, y_name, met
 ### Results --------------------------------------------------------------------
 
 ### Create appropriate data sets to use our implemented functions.
-# X_train <- training_data[ , -which(names(training_data) == "y")]
-X_test <- x
+X_test <- task_bike$data(rows = split$test,
+                         cols = task_bike$feature_names)
 # y_train <- training_data[ , which(names(training_data) == "y")]
-y_test <- data[ , "obese"]
+y_test <- task_bike$data(rows = split$test,
+                         cols = task_bike$target_names)
 
 
 # loco
-loco_results <- n_times(fi, 10, FALSE, loco, model, X_test, y_test$obese,
-                        as.data.frame(data), 'obese', "ce")
+loco_results <- n_times(fi, 10, FALSE, loco, tuned_model, X_test, y_test$cnt,
+                        bike, 'cnt', "mse")
 p_loco = barplot_top6(loco_results, colnames(X_test)) + coord_flip()
 ggsave('figures/obesity_loco.pdf', p_loco, width=3, height=2)
 
 # pfi
-pfi_results <- n_times(fi, 10, FALSE, pfi_fname, model, X_test, y_test$obese, "ce")
+pfi_results <- n_times(fi, 10, FALSE, pfi_fname, tuned_model, X_test, y_test$cnt, "mse")
 p_pfi = barplot_top6(pfi_results, colnames(X_test)) + coord_flip()
+# importance = FeatureImp$new(model, loss = "mse", n.repetitions = 100, compare = "difference")
+# importance$plot()
 ggsave('figures/obesity_pfi.pdf', p_pfi, width=3, height=2)
-
-# random forest fi
-# rffi_results = importance(tuned_model$model)
-# p_rffi = barplot_top6(list(rffi_results,0), names(rffi_results)) + coord_flip()
-# ggsave('figures/obesity_rffi.pdf', p_rffi, width=3, height=2)

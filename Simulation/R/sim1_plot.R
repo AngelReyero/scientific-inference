@@ -49,7 +49,7 @@ p + coord_flip() + # scale_y_continuous(trans="S_sqrt",breaks=seq(-0.1,0.5,0.05)
                       labels = c(expression(X[1]), expression(X[2]), expression(X[3]), expression(X[4]), expression(X[5]), expression(X[6]), expression(X[7])))
 
 # save absolute values
-ggsave('figures/cfi_pfi_SAGEvalueFunc_orig.pdf', width=6, height=5)
+ggsave('figures/cfi_pfi_SAGEvalueFunc_orig.pdf', width=4.5, height=3)
 
 ######
 # the following creates relative values (relative to most important feat.)
@@ -75,7 +75,7 @@ p + coord_flip() + # scale_y_continuous(trans="S_sqrt",breaks=seq(-0.1,0.5,0.05)
 
 
 # save relative values
-ggsave('figures/cfi_pfi_SAGEvalueFunc.pdf', width=6, height=5)
+ggsave('figures/cfi_pfi_SAGEvalueFunc.pdf', width=4.5, height=3)
 
 ### error bars
 p2 = ggplot(data=df, aes(x=reorder(type, X), y=importance, fill=reorder(feature, X))) +
@@ -89,4 +89,4 @@ p2 + coord_flip() + # scale_y_continuous(trans="S_sqrt",breaks=seq(-0.1,0.5,0.05
   scale_fill_discrete(breaks=c('x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'),
                       labels = c(expression(X[1]), expression(X[2]), expression(X[3]), expression(X[4]), expression(X[5]), expression(X[6]), expression(X[7])))
 
-ggsave('figures/cfi_pfi_SAGEvalueFunc_errorBars.pdf', width=6, height=5)
+ggsave('figures/cfi_pfi_SAGEvalueFunc_errorBars.pdf', width=4.5, height=3)
