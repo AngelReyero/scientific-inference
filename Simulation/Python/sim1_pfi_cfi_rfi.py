@@ -5,12 +5,8 @@ import matplotlib.pyplot as plt
 from sklearn import linear_model
 from sklearn.metrics import mean_squared_error, r2_score
 
-import rfi.examples.chains as chains
-from rfi.explainers.explainer import Explainer
-from rfi.samplers.gaussian import GaussianSampler
-from rfi.decorrelators.gaussian import NaiveGaussianDecorrelator
-from rfi.explanation import Explanation
-
+from fippy.explainers import Explainer
+from fippy.samplers import GaussianSampler
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -18,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 mod1 = linear_model.LinearRegression()
 # mod1 = linear_model.Lasso(alpha=0)
 # savepath = 'C:/Users/ra59qih/sciebo/LMU/Forschung/Feature_importance/Python/'
-savepath = ''
+savepath = '~/university/postdoc/research/fi_inference/code/paper_2022_feature_importance_guide/Simulation/Python/'
 
 # datasets to use
 data = pd.read_csv(savepath + 'extrapolation.csv')
@@ -61,17 +57,9 @@ for kk in range(len(models)):
 # explain model
 
 sampler = GaussianSampler(X_train)
-decorrelator = NaiveGaussianDecorrelator(X_train)
-fsoi = X_train.columns
-ordering = [tuple(fsoi)]
+wrk = Explainer(mod1.predict, X_train, loss=mean_squared_error, sampler=sampler)
 
-wrk = Explainer(mod1.predict, fsoi, X_train,
-                loss=mean_squared_error, sampler=sampler,
-                decorrelator=decorrelator)
-
-
-
-ex_cfi = wrk.ais_via_contextfunc(fsoi, X_test, y_test, context='remainder', marginalize=False)
+ex_cfi = wrk.cfi(X_test, y_test)
 ex_cfi.hbarplot()
 plt.show()
 
@@ -79,7 +67,7 @@ df_cfi = ex_cfi.fi_means_quantiles()
 df_cfi['type'] = 'cfi'
 
 
-ex_pfi = wrk.dis_from_baselinefunc(fsoi, X_test, y_test, baseline='remainder', marginalize=False)
+ex_pfi = wrk.pfi(X_test, y_test)
 ex_pfi.hbarplot()
 plt.show()
 
@@ -88,10 +76,11 @@ df_pfi['type'] = 'pfi'
 
 
 G = ['x1','x3']
-ex5 = wrk.dis_from_baselinefunc(fsoi, X_test, y_test, baseline='remainder')
-ex6 = wrk.dis_from_baselinefunc(G, X_test, y_test, baseline='remainder')
-scores_rfi = ex5.scores - ex6.scores
-ex_rfi = Explanation(fsoi, scores_rfi)
+ex_rfi = wrk.rfi(G, X_test, y_test)
+# ex5 = wrk.dis_from_baselinefunc(fsoi, X_test, y_test, baseline='remainder')
+# ex6 = wrk.dis_from_baselinefunc(G, X_test, y_test, baseline='remainder')
+# scores_rfi = ex5.scores - ex6.scores
+# ex_rfi = Explanation(fsoi, scores_rfi)
 ex_rfi.hbarplot()
 plt.show()
 
@@ -100,9 +89,5 @@ df_rfi['type'] = 'rfi'
 
 df_res = pd.concat([df_pfi, df_cfi, df_rfi]).reset_index()
 df_res.to_csv(savepath+'df_res.csv')
-
-
-#df_res = pd.concat([df_pfi]).reset_index()
-#df_res.to_csv(savepath+'df_res.csv')
 
 print(mod1.coef_, mod1.intercept_)
