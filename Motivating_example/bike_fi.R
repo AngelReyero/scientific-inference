@@ -91,7 +91,7 @@ outer_learners = mlr3misc::map(tab$learner, "learner")
 extract_inner_tuning_results(rr)[,1:5]
 # compare to outer
 rr$score()[,7:9]
-# performance of final model
+# performance of learner
 base_rr$aggregate()
 rr$aggregate()
 

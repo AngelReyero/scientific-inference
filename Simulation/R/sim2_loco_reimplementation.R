@@ -9,7 +9,7 @@ theme_set(theme_bw())
 
 set.seed(123)
 
-data = read.csv("Python/extrapolation.csv")
+data = read.csv("Python/interaction.csv")
 lp = 'Python/'
 
 df <- data[ , -which(names(data) == "X")]
@@ -27,11 +27,15 @@ Y_train <- training_data[ , which(names(training_data) == "y")]
 Y_test <- test_data[ , which(names(test_data) == "y")]
 
 ### Fit a linear model using the training data.
-model <- lm(y ~ ., data = training_data)
-model$coefficients[7] <- model$coefficients[7] + model$coefficients[8]
-model$coefficients[8] <- 0
-### Fit LASSO
-# model = glmnet(training_data[,1:5], training_data$y, alpha = 1, lambda = 0)
+form <- paste(paste0("I(",names(df[1]), "*", names(df[2:(dim(df)[2]-1)]),")"), collapse=" + ")
+i <- 2
+while(i < (dim(df)[2]-1)){
+  form <- paste(form,"+", paste(paste0("I(",names(df[i]), "*", names(df[(i+1):(dim(df)[2]-1)]),")"), collapse=" + "))
+  i <- i+1
+}
+form2 <- paste(paste0("I(",names(df[-8]), "*", names(df[-8]),")"), collapse=" + ")
+forma <- eval(paste("y ~", paste(paste0(names(df[-8])), collapse=" + "), "+",form2, "+",form))
+model <- lm(forma, data = training_data)
 
 ### Performance
 preds <- predict(model, newdata = test_data[,1:7])
@@ -66,11 +70,17 @@ loco <- function(original_model, FOI, X_test, Y_test, original_data, target){
   # Generate the formula object we will give to the lm()-function.
   outcome <- names(loco_y_test)
   variables <- names(loco_X_test)
-  f <- as.formula(paste(outcome, paste(variables, collapse = " + "),
-                        sep = " ~ "))
+  form <- paste(paste0("I(",variables[1], "*", variables[2:(length(variables))],")"), collapse=" + ")
+  i <- 2
+  while(i < (length(variables))){
+    form <- paste(form,"+", paste(paste0("I(",variables[i], "*", variables[(i+1):(length(variables))],")"), collapse=" + "))
+    i <- i+1
+  }
+  form2 <- paste(paste0("I(",variables, "*", variables,")"), collapse=" + ")
+  forma <- eval(paste(outcome," ~ ", paste(paste0(variables), collapse=" + "), "+",form2, "+",form))
 
   # Train the OLS model.
-  new_model <- lm(f, data = new_training_data)
+  new_model <- lm(forma, data = new_training_data)
 
   # Get the MSE for the model with all features.
   preds_for_original <- predict(original_model, X_test)
@@ -136,4 +146,4 @@ res3 = p$data
 res3$type = "loco"
 colnames(res3) = c("feature", "mean", "q.05", "q.95", "type")
 
-write.csv(res3, paste0(lp, 'df_res3.csv'))
+write.csv(res3, paste0(lp, 'df2_res3.csv'))

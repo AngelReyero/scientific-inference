@@ -3,7 +3,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from sklearn import linear_model
+from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import mean_squared_error, r2_score
+
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
 
 import rfi.examples.chains as chains
 from rfi.explainers.explainer import Explainer
@@ -15,13 +19,13 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
-mod1 = linear_model.LinearRegression()
+# mod1 = linear_model.LinearRegression()
 # mod1 = linear_model.Lasso(alpha=0)
 # savepath = 'C:/Users/ra59qih/sciebo/LMU/Forschung/Feature_importance/Python/'
 savepath = ''
 
 # datasets to use
-data = pd.read_csv(savepath + 'extrapolation.csv')
+data = pd.read_csv(savepath + 'interaction.csv')
 
 data = data[['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7', 'y']]
 ntrain = int(0.7 * data.shape[0])
@@ -33,21 +37,15 @@ X_train, y_train = df_train[xcolumns], df_train[ycolumn]
 X_test, y_test = df_test[xcolumns], df_test[ycolumn]
 
 # fit models
+# X_train_ = PolynomialFeatures(degree=2, include_bias=False).fit_transform(X_train)
+# mod1.fit(X_train_, y_train)
 
-mod1.fit(X_train, y_train)
-#mod1.coef_[0, 0] = 0.3
-#mod1.coef_[0, 1] = -0.3
-#mod1.coef_[0, 2] = 0
-#mod1.coef_[0, 3] = 1
-#mod1.coef_[0, 4] = 0
-mod1.coef_[0, 5] = mod1.coef_[0, 5] + mod1.coef_[0, 6]
-mod1.coef_[0, 6] = 0
-
+mod1 = smf.ols(formula='y ~ x1 + np.square(x1) + x2 + np.square(x2) + x3 + np.square(x3) + x4 + np.square(x4) + x5 + np.square(x5) + x6 + np.square(x6) + x7 + np.square(x7) + x1:x2 + x1:x3 + x1:x4 + x1:x5 + x1:x6 + x1:x7 + x2:x3 + x2:x4 + x2:x5 + x2:x6 + x2:x7 + x3:x4 + x3:x5 + x3:x6 + x3:x7 + x4:x5 + x4:x6 + x4:x7 + x5:x6 + x5:x7 + x6:x7', data=df_train).fit()
 
 scoring = [mean_squared_error, r2_score]
 names = ['MSE', 'r2_score']
 models = [mod1]
-m_names = ['Lasso']
+m_names = ['LinearRegression']
 
 for kk in range(len(models)):
     model = models[kk]
@@ -99,10 +97,10 @@ df_rfi = ex_rfi.fi_means_quantiles()
 df_rfi['type'] = 'rfi'
 
 df_res = pd.concat([df_pfi, df_cfi, df_rfi]).reset_index()
-df_res.to_csv(savepath+'df_res.csv')
+df_res.to_csv(savepath+'df2_res.csv')
 
 
 #df_res = pd.concat([df_pfi]).reset_index()
 #df_res.to_csv(savepath+'df_res.csv')
 
-print(mod1.coef_, mod1.intercept_)
+print(mod1.params)

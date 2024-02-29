@@ -18,11 +18,11 @@ set.seed(123)
 # setwd("~/paper_2022_feature_importance_guide/Simulation")
 lp = 'Python/'
 
-df1 = read.csv(paste0(lp, 'df_res.csv')) #pfi,cfi,rfi
-df2 = read.csv(paste0(lp, 'df_res2.csv')) #SAGEvf, SAGEvf surplus
-df3 = read.csv(paste0(lp, 'df_res3.csv')) # loco
-# df4 = read.csv(paste0(lp, 'df_res4.csv')) #loci
-df5 = read.csv(paste0(lp, 'df_res_SAGE.csv')) # SAGE
+df1 = read.csv(paste0(lp, 'df2_res.csv')) #pfi,cfi,rfi
+df2 = read.csv(paste0(lp, 'df2_res2.csv')) #SAGEvf, SAGEvf surplus
+df3 = read.csv(paste0(lp, 'df2_res3.csv')) # loco
+# df4 = read.csv(paste0(lp, 'df2_res4.csv')) #loci
+df5 = read.csv(paste0(lp, 'df2_res_SAGE.csv')) # SAGE
 df = rbind(df1, df2[c(15:21,1:7),], df5, df3) #, df2[c(22:28,8:14),])
 df$type[df$type == "pfi"] <- "PFI"
 df$type[df$type == "cfi"] <- "CFI"
@@ -49,7 +49,7 @@ p + coord_flip() + # scale_y_continuous(trans="S_sqrt",breaks=seq(-0.1,0.5,0.05)
                       labels = c(expression(X[1]), expression(X[2]), expression(X[3]), expression(X[4]), expression(X[5]), expression(X[6]), expression(X[7])))
 
 # save absolute values
-ggsave('figures/cfi_pfi_SAGEvalueFunc_orig.pdf', width=4, height=3.5)
+ggsave('figures/sim2_cfi_pfi_SAGEvalueFunc_orig.pdf', width=4, height=3.5)
 
 ######
 # the following creates relative values (relative to most important feat.)
@@ -69,13 +69,13 @@ p = ggplot(data=df, aes(x=reorder(type, X), y=importance, fill=reorder(feature, 
 
 p = p + labs(x='IML technique', y='importance', fill='feature')
 # comment out scale_y_continuous in the following if you want "normal" scales
-p + coord_flip() + # scale_y_continuous(trans="S_sqrt",breaks=seq(-0.1,0.5,0.05))+
+p + coord_flip() + scale_y_continuous(trans="S_sqrt",breaks=c(-1,-0.5,-0.2,0,0.2,0.5,1))+
   scale_fill_discrete(breaks=c('x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'),
                       labels = c(expression(X[1]), expression(X[2]), expression(X[3]), expression(X[4]), expression(X[5]), expression(X[6]), expression(X[7])))
 
 
 # save relative values
-ggsave('figures/cfi_pfi_SAGEvalueFunc.pdf', width=4, height=3.5)
+ggsave('figures/sim2_cfi_pfi_SAGEvalueFunc.pdf', width=4, height=3.5)
 
 ### error bars
 p2 = ggplot(data=df, aes(x=reorder(type, X), y=importance, fill=reorder(feature, X))) +
@@ -89,4 +89,4 @@ p2 + coord_flip() + # scale_y_continuous(trans="S_sqrt",breaks=seq(-0.1,0.5,0.05
   scale_fill_discrete(breaks=c('x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7'),
                       labels = c(expression(X[1]), expression(X[2]), expression(X[3]), expression(X[4]), expression(X[5]), expression(X[6]), expression(X[7])))
 
-ggsave('figures/cfi_pfi_SAGEvalueFunc_errorBars.pdf', width=4, height=3.5)
+ggsave('figures/sim2_cfi_pfi_SAGEvalueFunc_errorBars.pdf', width=4, height=3.5)
