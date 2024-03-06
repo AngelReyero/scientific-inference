@@ -27,24 +27,14 @@ Y_train <- training_data[ , which(names(training_data) == "y")]
 Y_test <- test_data[ , which(names(test_data) == "y")]
 
 ### Fit a linear model using the training data.
-form <- paste(paste0("I(",names(df[3]), "*", names(df[4:5]),")"), collapse=" + ")
-i <- 4
-while(i < 5){
-  form <- paste(form,"+", paste(paste0("I(",names(df[i]), "*", names(df[5]),")"), collapse=" + "))
-  i <- i+1
-}
-form2 <- paste(paste0("I(",names(df[3:5]), "*", names(df[3:5]),")"), collapse=" + ")
-forma <- eval(paste("y ~", paste(paste0(names(df[1:5])), collapse=" + "), "+",form2, "+",form))
-model <- lm(forma, data = training_data)
-model$coefficients
-# model$coefficients[8] <- model$coefficients[8]+model$coefficients[7]
-# model$coefficients[7] <- 0
-# model$coefficients
+model <- lm(y ~ ., data = training_data)
+model$coefficients[7] <- model$coefficients[7] + model$coefficients[8]
+model$coefficients[8] <- 0
 ### Fit LASSO
 # model = glmnet(training_data[,1:5], training_data$y, alpha = 1, lambda = 0)
 
 ### Performance
-preds <- predict(model, newdata = test_data[,1:5])
+preds <- predict(model, newdata = test_data[,1:7])
 rmse <- sqrt(mean((test_data$y - preds) ^ 2))
 print(paste("RMSE:", rmse))
 summary_mod <- summary(model)
@@ -76,17 +66,11 @@ loco <- function(original_model, FOI, X_test, Y_test, original_data, target){
   # Generate the formula object we will give to the lm()-function.
   outcome <- names(loco_y_test)
   variables <- names(loco_X_test)
-  l_var <- length(variables)
-  int_var <- variables[variables %in% c("x3","x4","x5")]
-  l_int_var <- length(int_var)
-  form <- paste(paste0("I(",int_var[1], "*", int_var[2:(l_int_var)],")"), collapse=" + ")
-  if(l_int_var>2) form <- paste(form,paste0("+ I(",int_var[2], "*", int_var[3],")"), collapse=" + ")
-  form2 <- paste(paste0("I(",int_var[1:l_int_var], "*", int_var[1:l_int_var],")"), collapse=" + ")
-  forma <- eval(paste(outcome,"~", paste(paste0(variables[1:l_var]), collapse=" + "), "+",form2, "+",form))
-
+  f <- as.formula(paste(outcome, paste(variables, collapse = " + "),
+                        sep = " ~ "))
 
   # Train the OLS model.
-  new_model <- lm(forma, data = new_training_data)
+  new_model <- lm(f, data = new_training_data)
 
   # Get the MSE for the model with all features.
   preds_for_original <- predict(original_model, X_test)
@@ -125,11 +109,11 @@ n_times <- function(func, n, return_raw, ...) {
 barplot_results <- function(results) {
   ### Create a data.frame to be able to use ggplot2 appropriately.
   results_mean <- data.frame(results[1], results[2], results[3])
-  rownames(results_mean) <- c('x1', 'x2', 'x3', 'x4', 'x5')#, 'x6', 'x7')
+  rownames(results_mean) <- c('x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7')
   colnames(results_mean) <- c('col_means', 'q.05', 'q.95')
 
   ### Use ggplot2 to create the barplot.
-  ggplot(cbind(Features = rownames(results_mean), results_mean[1:5, ]),
+  ggplot(cbind(Features = rownames(results_mean), results_mean[1:7, ]),
          aes(x = reorder(Features, results_mean$col_means),
              y = results_mean$col_means)) +
     ### Plot the mean value bars.
