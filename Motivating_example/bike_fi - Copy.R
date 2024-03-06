@@ -45,6 +45,9 @@ load("data/bike.RData")
 
 set.seed(123)
 
+# Parallelization
+plan("multisession")
+
 # Task
 task_bike = as_task_regr(bike, target = "cnt")
 split = partition(task_bike)
@@ -53,30 +56,52 @@ split = partition(task_bike)
 base_learner = lrn("regr.featureless")
 
 # Learner
-rf_learner = lrn("regr.ranger")
+learner = lrn("regr.ranger",
+              mtry            = to_tune(1, 10, logscale = TRUE),
+              num.trees       = 500,
+              importance      = "none",
+              max.depth       = to_tune(100, 150, logscale = TRUE),
+              min.node.size   = to_tune(1, 5, logscale = FALSE)
+)
+# learner$fallback = lrn("regr.featureless")
+
+# Auto-Tuner
+at = auto_tuner(
+  tuner = tnr("random_search"),
+  learner = learner,
+  resampling = rsmp("repeated_cv", folds = 5, repeats = 2),
+  measure = msr("regr.mse"),
+  terminator = trm("evals", n_evals= 200),
+)
+
+# Outer resampling (-> Nested resampling)
+outer_resampling = rsmp("repeated_cv", folds = 5, repeats = 2)
 
 # Compute
-base_learner$train(task_bike, row_ids = split$train)
-rf_learner$train(task_bike, row_ids = split$train)
+base_rr = resample(task_bike$filter(split$train), base_learner, outer_resampling, store_models = TRUE)
+start_time = Sys.time()
+rr = resample(task_bike$filter(split$train), at, outer_resampling, store_models = TRUE)
+duration = Sys.time()-start_time
 
-# Test data
-# features in test data
-bike_x = task_bike$data(rows = split$test,
-                        cols = task_bike$feature_names)
-# target in test data
-bike_y = task_bike$data(rows = split$test,
-                        cols = task_bike$target_names)
+# Evaluation
+tab = as.data.table(rr)
+outer_learners = mlr3misc::map(tab$learner, "learner")
 
 # Performance
-preds <- rf_learner$predict_newdata(bike_x)$response
-rmse <- sqrt(mean((bike_y$cnt - preds) ^ 2))
-print(paste("RMSE:", rmse))
-r_sq <- cor(bike_y$cnt,preds)^2
-print(paste("R-squared:", r_sq))
+extract_inner_tuning_results(rr)[,1:5]
+# compare to outer
+rr$score()[,7:9]
+# performance of learner
+base_rr$aggregate()
+rr$aggregate()
 
+# Optimal Model
+# minimize performance measure
+ind = which.min(rr$score()$regr.mse)
+tuned_model = outer_learners[[ind]]
 
 # Save / load
-save(task_bike,split,base_learner,rf_learner, file = "trained_model.RData")
+save(base_rr,rr,learner,at,tuned_model,duration,split, file = "trained_model.RData")
 # outer_resampling
 
 # load("trained_model.RData")
@@ -150,8 +175,8 @@ pfi_fname <- function(fname, model, X_test, y_test, metric = "mse") {
   X_test_perm[[fname]] <- sample(X_test_perm[[fname]])
 
   ### Predict on the original data situation as well as on the permuted one.
-  preds_original <- predict(model, X_test)$predictions
-  preds_perm <- predict(model,X_test_perm)$predictions
+  preds_original <- predict(model, X_test)
+  preds_perm <- predict(model,X_test_perm)
 
   if(metric == "mse"){
     ### Get the MSE for the model with all features.
@@ -196,11 +221,11 @@ loco <- function(fname, original_model, X_test, y_test, original_df, y_name, met
   f <- as.formula(paste(outcome, paste(variables, collapse = " + "), sep = " ~ "))
 
   ### Train the OLS model.
-  new_model <- ranger::ranger(f, data = new_training_data) ### change here if y is not binomial
+  new_model <- glm(f, family="gaussian", data = new_training_data) ### change here if y is not binomial
 
   ### predict
-  preds_for_original <- predict(original_model,X_test)$predictions
-  predict_for_loco <- predict(new_model, loco_X_test)$predictions
+  preds_for_original <- predict(original_model,X_test)
+  predict_for_loco <- predict(new_model, loco_X_test)
 
   if(metric == "mse"){
     ### Get the MSE for the model with all features.
@@ -225,15 +250,23 @@ loco <- function(fname, original_model, X_test, y_test, original_df, y_name, met
 
 ### Results --------------------------------------------------------------------
 
+### Create appropriate data sets to use our implemented functions.
+X_test <- task_bike$data(rows = split$test,
+                         cols = task_bike$feature_names)
+# y_train <- training_data[ , which(names(training_data) == "y")]
+y_test <- task_bike$data(rows = split$test,
+                         cols = task_bike$target_names)
+
+
 # loco
-loco_results <- n_times(fi, 10, FALSE, loco, rf_learner$model, bike_x, bike_y$cnt,
+loco_results <- n_times(fi, 10, FALSE, loco, tuned_model, X_test, y_test$cnt,
                         bike, 'cnt', "mse")
 p_loco = barplot_top6(loco_results, colnames(X_test)) + coord_flip()
-ggsave('figures/motivation_loco.pdf', p_loco, width=3, height=2)
+ggsave('figures/obesity_loco.pdf', p_loco, width=3, height=2)
 
 # pfi
-pfi_results <- n_times(fi, 10, FALSE, pfi_fname, rf_learner$model, bike_x, bike_y$cnt, "mse")
+pfi_results <- n_times(fi, 10, FALSE, pfi_fname, tuned_model, X_test, y_test$cnt, "mse")
 p_pfi = barplot_top6(pfi_results, colnames(X_test)) + coord_flip()
 # importance = FeatureImp$new(model, loss = "mse", n.repetitions = 100, compare = "difference")
 # importance$plot()
-ggsave('figures/motivation_pfi.pdf', p_pfi, width=3, height=2)
+ggsave('figures/obesity_pfi.pdf', p_pfi, width=3, height=2)
