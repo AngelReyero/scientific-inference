@@ -63,7 +63,7 @@ sampler = GaussianSampler(X_train)
 wrk = Explainer(reg_lin.predict, X_train, loss=mean_squared_error, sampler=sampler)
 
 fsoi = list(X_train.columns)
-ex_sage = wrk.csagevfs(X_test, y_test, C='empty', nr_resample_marginalize=30)
+ex_sage = wrk.csagevfs(X_test, y_test, C='empty', nr_resample_marginalize=100)
 ex_sage = wrk.ais_via_contextfunc(fsoi, X_test, y_test, context='empty', marginalize=True)
 # ex_sage.hbarplot()
 ex_sage.hbarplot()
@@ -72,7 +72,7 @@ plt.show()
 df_sage = ex_sage.fi_means_quantiles()
 df_sage['type'] = 'conditional v(j)'
 
-ex_sage2 = wrk.csagevfs(X_test, y_test, C='remainder')
+ex_sage2 = wrk.csagevfs(X_test, y_test, C='remainder', nr_resample_marginalize=100)
 # ex_sage2 = wrk.ais_via_contextfunc(fsoi, X_test, y_test, context='remainder', marginalize=True)
 ex_sage2.hbarplot()
 plt.show()
@@ -80,7 +80,7 @@ plt.show()
 df_sage2 = ex_sage2.fi_means_quantiles()
 df_sage2['type'] = 'conditional v(-j u j) - v(-j)'
 
-ex_sage_m = wrk.msagevfs(X_test, y_test, C='empty')
+ex_sage_m = wrk.msagevfs(X_test, y_test, C='empty', nr_resample_marginalize=100)
 # ex_sage_m = wrk.dis_from_baselinefunc(fsoi, X_test, y_test, baseline='empty', marginalize=True)
 ex_sage_m.hbarplot()
 plt.show()
@@ -88,7 +88,7 @@ plt.show()
 df_sage_m = ex_sage_m.fi_means_quantiles()
 df_sage_m['type'] = 'marginal v(j)'
 
-ex_sage_m2 = wrk.msagevfs(X_test, y_test, C='remainder')
+ex_sage_m2 = wrk.msagevfs(X_test, y_test, C='remainder', nr_resample_marginalize=100)
 # ex_sage_m2 = wrk.dis_from_baselinefunc(fsoi, X_test, y_test, baseline='remainder', marginalize=True)
 ex_sage_m2.hbarplot()
 plt.show()
@@ -106,12 +106,13 @@ print(reg_lin.params)
 
 ## SAGE
 
-df = data
+# df = data
 
-ex_msage, orderings = wrk.msage(X_test, y_test)
+#mSAGE
+ex_msage, orderings = wrk.msage(X_test, y_test, nr_resample_marginalize=100)
 ex_msage.ex_name = 'msage'
-ex_msage.to_csv(savepath=savepath, filename='ex_msage.csv')
-ex_msage = Explanation.from_csv(savepath+'ex_msage.csv')
+# ex_msage.to_csv(savepath=savepath, filename='ex_msage.csv')
+# ex_msage = Explanation.from_csv(savepath+'ex_msage.csv')
 
 ex_msage.hbarplot()
 plt.show()
@@ -119,10 +120,11 @@ plt.show()
 df_msage = ex_msage.fi_means_quantiles()
 df_msage['type'] = 'mSAGE'
 
-ex_csage, orderings = wrk.csage(X_test, y_test)
+# cSAGE 
+ex_csage, orderings = wrk.csage(X_test, y_test, nr_resample_marginalize=100)
 ex_csage.ex_name = 'csage'
-ex_csage.to_csv(savepath=savepath, filename='ex_csage.csv')
-ex_csage = Explanation.from_csv(savepath+'ex_csage.csv')
+#ex_csage.to_csv(savepath=savepath, filename='ex_csage.csv')
+#ex_csage = Explanation.from_csv(savepath+'ex_csage.csv')
 
 ex_csage.hbarplot()
 plt.show()

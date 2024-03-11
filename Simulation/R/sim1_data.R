@@ -18,10 +18,10 @@ x4 = x3 + rnorm(n, sd=0.1)
 x5 = rnorm(n)
 # x6 = rnorm(n)
 # x7 = x6 + rnorm(n, sd=0.1)
+# y = x4 + x5 + x4*x5 + rnorm(n, sd=0.1)
 y = x4 + x5 + x4*x5 + rnorm(n, sd=0.1)
-# y = x4 + x5 + x4*x5 + x6 + rnorm(n, sd=0.1)
 
-data = data.frame(x1=x1, x2=x2, x3=x3, x4=x4, x5=x5, y=y) # , x6=x6, x7=x7, y=y)
+data = data.frame(x1=x1, x2=x2, x3=x3, x4=x4, x5=x5, y=y)
 maxs = apply(data, 2, function(x) max(abs(x)))
 for(i in 1:ncol(data)) data[,i] = data[,i]/maxs[i]
 corrplot(cor(data), method="circle", type="lower")
@@ -42,4 +42,4 @@ imp_test <- FeatureImp$new(predictor_test,loss = "mae", n.repetitions = 10, comp
 p_pfi = plot(imp_test)
 p_pfi
 
-write.csv(data, file="Python/extrapolation.csv")
+write.csv(data, file="Simulation/Python/extrapolation.csv")

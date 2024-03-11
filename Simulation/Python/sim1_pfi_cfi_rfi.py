@@ -57,7 +57,7 @@ for kk in range(len(models)):
 sampler = GaussianSampler(X_train)
 wrk = Explainer(mod1.predict, X_train, loss=mean_squared_error, sampler=sampler)
 
-ex_cfi = wrk.cfi(X_test, y_test)
+ex_cfi = wrk.cfi(X_test, y_test, nr_resample_marginalize=100)
 ex_cfi.hbarplot()
 plt.show()
 
@@ -65,7 +65,7 @@ df_cfi = ex_cfi.fi_means_quantiles()
 df_cfi['type'] = 'cfi'
 
 
-ex_pfi = wrk.pfi(X_test, y_test)
+ex_pfi = wrk.pfi(X_test, y_test, nr_resample_marginalize=100)
 ex_pfi.hbarplot()
 plt.show()
 
@@ -74,7 +74,7 @@ df_pfi['type'] = 'pfi'
 
 
 G = ['x1','x3']
-ex_rfi = wrk.rfi(G, X_test, y_test)
+ex_rfi = wrk.rfi(G, X_test, y_test, nr_resample_marginalize=100)
 # ex5 = wrk.dis_from_baselinefunc(fsoi, X_test, y_test, baseline='remainder')
 # ex6 = wrk.dis_from_baselinefunc(G, X_test, y_test, baseline='remainder')
 # scores_rfi = ex5.scores - ex6.scores

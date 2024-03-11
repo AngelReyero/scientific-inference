@@ -9,8 +9,8 @@ theme_set(theme_bw())
 
 set.seed(123)
 
-data = read.csv("Python/extrapolation.csv")
-lp = 'Python/'
+data = read.csv("Simulation/Python/extrapolation.csv")
+lp = 'Simulation/Python/'
 
 df <- data[ , -which(names(data) == "X")]
 
@@ -26,6 +26,8 @@ X_test <- test_data[ , -which(names(test_data) == "y")]
 Y_train <- training_data[ , which(names(training_data) == "y")]
 Y_test <- test_data[ , which(names(test_data) == "y")]
 
+f_len <- dim(X_train)[2]
+
 ### Fit a linear model using the training data.
 form <- paste(paste0("I(",names(df[3]), "*", names(df[4:5]),")"), collapse=" + ")
 i <- 4
@@ -34,7 +36,7 @@ while(i < 5){
   i <- i+1
 }
 form2 <- paste(paste0("I(",names(df[3:5]), "*", names(df[3:5]),")"), collapse=" + ")
-forma <- eval(paste("y ~", paste(paste0(names(df[1:5])), collapse=" + "), "+",form2, "+",form))
+forma <- eval(paste("y ~", paste(paste0(names(df[1:f_len])), collapse=" + "), "+",form2, "+",form))
 model <- lm(forma, data = training_data)
 model$coefficients
 # model$coefficients[8] <- model$coefficients[8]+model$coefficients[7]
@@ -44,7 +46,7 @@ model$coefficients
 # model = glmnet(training_data[,1:5], training_data$y, alpha = 1, lambda = 0)
 
 ### Performance
-preds <- predict(model, newdata = test_data[,1:5])
+preds <- predict(model, newdata = test_data[,1:f_len])
 rmse <- sqrt(mean((test_data$y - preds) ^ 2))
 print(paste("RMSE:", rmse))
 summary_mod <- summary(model)
@@ -125,11 +127,11 @@ n_times <- function(func, n, return_raw, ...) {
 barplot_results <- function(results) {
   ### Create a data.frame to be able to use ggplot2 appropriately.
   results_mean <- data.frame(results[1], results[2], results[3])
-  rownames(results_mean) <- c('x1', 'x2', 'x3', 'x4', 'x5')#, 'x6', 'x7')
+  rownames(results_mean) <- c('x1', 'x2', 'x3', 'x4', 'x5')
   colnames(results_mean) <- c('col_means', 'q.05', 'q.95')
 
   ### Use ggplot2 to create the barplot.
-  ggplot(cbind(Features = rownames(results_mean), results_mean[1:5, ]),
+  ggplot(cbind(Features = rownames(results_mean), results_mean[1:f_len, ]),
          aes(x = reorder(Features, results_mean$col_means),
              y = results_mean$col_means)) +
     ### Plot the mean value bars.
