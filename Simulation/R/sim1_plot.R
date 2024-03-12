@@ -20,9 +20,9 @@ lp = 'Simulation/Python/'
 df1 = read.csv(paste0(lp, 'df_res.csv')) #pfi,cfi,rfi
 df2 = read.csv(paste0(lp, 'df_res2.csv')) #SAGEvf, SAGEvf surplus
 df3 = read.csv(paste0(lp, 'df_res3.csv')) # loco
-# df4 = read.csv(paste0(lp, 'df_res4.csv')) #loci
+df4 = read.csv(paste0(lp, 'df_res4.csv')) #loci
 df5 = read.csv(paste0(lp, 'df_res_SAGE.csv')) # SAGE
-df = rbind(df1, df2[c(11:15,1:10),], df5[6:10,], df3) #, df2[c(22:28,8:14),])
+df = rbind(df1, df2[c(11:15,1:10),], df5[6:10,], df3, df4) #, df2[c(22:28,8:14),])
 df$type[df$type == "pfi"] <- "PFI"
 df$type[df$type == "cfi"] <- "CFI"
 df$type[df$type == "rfi"] <- "RFI"
@@ -30,11 +30,12 @@ df$type[df$type == "marginal v(j)"] <- "mSAGEvf"
 df$type[df$type == "conditional v(j)"] <- "cSAGEvf"
 df$type[df$type == "conditional v(-j u j) - v(-j)"] <- "cSAGEvfs"
 df$type[df$type == "loco"] <- "LOCO"
+df$type[df$type == "loci"] <- "WVIMP"
 colnames(df)[3] = "importance"
 df$X = length(df$importance):1
 names = rev(unique(df$type))
-# names[names == "RFI"] = expression(RFI^paste("{", X[1]  , ", " , X[3], "}"))
-names[names == "RFI"] = expression(RFI^paste("{", X[1],"}"))
+names[names == "RFI"] = expression(RFI^paste("{", X[1]  , ", " , X[3], "}"))
+# names[names == "RFI"] = expression(RFI^paste("{", X[1],"}"))
 
 # expression(paste("RFI(", X[1], ", ", X[3], ")"))
 
