@@ -1,13 +1,16 @@
+library("iml")
+library("mlr3")
+library("mlr3verse")
 library("ggplot2")
+library("iml")
 library("dplyr")
-library("gam")
-library("mgcv")
+library("glmnet")
 theme_set(theme_bw())
 
 set.seed(123)
 
-data = read.csv("Simulation/Python/extrapolation.csv")
-lp = 'Simulation/Python/'
+data = read.csv("Simulation_true/Python/extrapolation.csv")
+lp = 'Simulation_true/Python/'
 
 df <- data[ , -which(names(data) == "X")]
 
@@ -26,22 +29,25 @@ Y_test <- test_data[ , which(names(test_data) == "y")]
 f_len <- dim(X_train)[2]
 
 ### Fit a linear model using the training data.
-form <- paste(paste0("I(",names(df[3]), "*", names(df[4:5]),")"), collapse=" + ")
-i <- 4
-while(i < 5){
-  form <- paste(form,"+", paste(paste0("I(",names(df[i]), "*", names(df[5]),")"), collapse=" + "))
-  i <- i+1
-}
-form2 <- paste(paste0("I(",names(df[3:5]), "*", names(df[3:5]),")"), collapse=" + ")
-forma <- eval(paste("y ~", paste(paste0(names(df[1:f_len])), collapse=" + "), "+",form2, "+",form))
+forma <- eval(paste0("y ~ ", paste(names(df[4:f_len]), collapse=" + "),
+                    " + ",paste0("I(",names(df[4]),"*",names(df[f_len]),")")))
 model <- lm(forma, data = training_data)
 model$coefficients
 
+### Performance
+preds <- predict(model, newdata = test_data[,1:f_len])
+rmse <- sqrt(mean((test_data$y - preds) ^ 2))
+print(paste("RMSE:", rmse))
+summary_mod <- summary(model)
+summary_mod$r.squared
+r_sq <- cor(test_data$y,preds)^2
+print(paste("R-squared:", r_sq))
 
-### LOCI base
-loci <- function(original_model, FOI, X_test, Y_test, original_data, target){
-  # data only containing feature of interest
-  remainder <- original_data[colnames(original_data) %in% c(FOI, target)]
+
+### LOCO base
+loco <- function(original_model, FOI, X_test, Y_test, original_data, target){
+  # data without feature of interest
+  remainder <- original_data[,colnames(original_data) != FOI]
 
   # train / test split
   inds <- sample(nrow(remainder), 0.7 * nrow(remainder))
@@ -49,28 +55,42 @@ loci <- function(original_model, FOI, X_test, Y_test, original_data, target){
   new_test_data <- remainder[-inds, ]
 
   # feature and target split
-  loci_X_test <- new_test_data[colnames(new_test_data) != target]
-  loci_y_test <- new_test_data[target]
+  loco_X_test <- new_test_data[ , colnames(new_test_data) != target]
+  loco_y_test <- new_test_data[target]
 
-  # Train the refitted model
-  forma <- eval(paste0(target, " ~ ", FOI, "+I(", FOI, "^2)"))
+  # Generate the formula object we will give to the lm()-function.
+  outcome <- names(loco_y_test)
+  variables <- names(loco_X_test)
+  l_var <- length(variables)
+  int_var <- variables[variables %in% c("x4","x5")]
+  l_int_var <- length(int_var)
+  if(l_int_var > 1){
+    form <- paste(paste0("I(",int_var[1], "*", int_var[2:(l_int_var)],")"), collapse=" + ")
+    forma <- eval(paste(outcome,"~", paste(paste0(int_var[1:l_int_var]), collapse=" + "), "+",form))
+  } else {
+    forma <- eval(paste0(outcome," ~ ",int_var))
+  }
+
+
+  # Train the OLS model.
   new_model <- lm(forma, data = new_training_data)
 
-  # Get the variance of Y (= MSE of null model)
-  var_y <- var(loci_y_test$y)
+  # Get the MSE for the model with all features.
+  preds_for_original <- predict(original_model, X_test)
+  original_mse <- mean((Y_test - preds_for_original) ^ 2)
 
   # Get the MSE for the model without the feature of interest.
-  preds_for_loci <- predict(new_model, loci_X_test)
-  loci_mse <- mean((loci_y_test$y - preds_for_loci) ^ 2)
+  preds_for_loco <- predict(new_model, loco_X_test)
+  loco_mse <- mean((loco_y_test$y - preds_for_loco) ^ 2)
 
-  ### LOCI is given by the differences of the MSEs.
-  var_y - loci_mse
+  ### LOCO is given by the differences of the MSEs.
+  loco_mse - original_mse
 }
 
-loci_naive <- function(original_data, original_model, X_test, Y_test, target, ...) {
-  ### Iterate over all features and apply the above implemented LOCI function.
+loco_naive <- function(original_data, original_model, X_test, Y_test, target, ...) {
+  ### Iterate over all features and apply the above implemented LOCO function.
   sapply(colnames(X_test),
-         function(name)loci(original_model, name, X_test, Y_test, original_data, target))
+         function(name)loco(original_model, name, X_test, Y_test, original_data, target))
 }
 
 ### Repeat n times
@@ -109,14 +129,14 @@ barplot_results <- function(results) {
     labs(y = "Mean Value", x = "Features")
 }
 
-loci_results <- n_times(loci_naive, 100, FALSE, df, model, X_test, Y_test, 'y')
+loco_results <- n_times(loco_naive, 100, FALSE, df, model, X_test, Y_test, 'y')
 
-p = barplot_results(loci_results)
+p = barplot_results(loco_results)
 p
 p$data
 
 res3 = p$data
-res3$type = "loci"
+res3$type = "loco"
 colnames(res3) = c("feature", "mean", "q.05", "q.95", "type")
 
-write.csv(res3, paste0(lp, 'df_res4.csv'))
+write.csv(res3, paste0(lp, 'df_res3.csv'))

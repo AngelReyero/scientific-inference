@@ -15,7 +15,7 @@ S_sqrt_trans <- function() trans_new("S_sqrt",S_sqrt,IS_sqrt)
 
 set.seed(123)
 
-lp = 'Simulation/Python/'
+lp = 'Simulation_true/Python/'
 
 df1 = read.csv(paste0(lp, 'df_res.csv')) #pfi,cfi,rfi
 df2 = read.csv(paste0(lp, 'df_res2.csv')) #SAGEvf, SAGEvf surplus
@@ -52,7 +52,7 @@ p + coord_flip() + # scale_y_continuous(trans="S_sqrt",breaks=seq(-0.1,0.5,0.05)
                       labels = c(expression(X[1]), expression(X[2]), expression(X[3]), expression(X[4]), expression(X[5])))
 
 # save absolute values
-ggsave('Simulation/figures/cfi_pfi_SAGEvalueFunc_orig.pdf', width=4, height=3)
+ggsave('Simulation_true/figures/cfi_pfi_SAGEvalueFunc_orig.pdf', width=4, height=3)
 
 ######
 # the following creates relative values (relative to most important feat.)
@@ -78,7 +78,7 @@ p + coord_flip() + # scale_y_continuous(trans="S_sqrt",breaks=seq(-0.1,0.5,0.05)
 
 
 # save relative values
-ggsave('Simulation/figures/cfi_pfi_SAGEvalueFunc.pdf', width=4, height=3)
+ggsave('Simulation_true/figures/cfi_pfi_SAGEvalueFunc.pdf', width=4, height=3)
 
 ### error bars
 p2 = ggplot(data=df, aes(x=reorder(type, X), y=importance, fill=reorder(feature, X))) +
@@ -92,4 +92,4 @@ p2 + coord_flip() + # scale_y_continuous(trans="S_sqrt",breaks=seq(-0.1,0.5,0.05
   scale_fill_discrete(breaks=c('x1', 'x2', 'x3', 'x4', 'x5'),
                       labels = c(expression(X[1]), expression(X[2]), expression(X[3]), expression(X[4]), expression(X[5])))
 
-ggsave('Simulation/figures/cfi_pfi_SAGEvalueFunc_errorBars.pdf', width=4, height=3)
+ggsave('Simulation_true/figures/cfi_pfi_SAGEvalueFunc_errorBars.pdf', width=4, height=3)

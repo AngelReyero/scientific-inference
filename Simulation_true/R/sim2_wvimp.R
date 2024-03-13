@@ -6,8 +6,8 @@ theme_set(theme_bw())
 
 set.seed(123)
 
-data = read.csv("Simulation/Python/extrapolation.csv")
-lp = 'Simulation/Python/'
+data = read.csv("Simulation_true/Python/extrapolation.csv")
+lp = 'Simulation_true/Python/'
 
 df <- data[ , -which(names(data) == "X")]
 
@@ -26,14 +26,8 @@ Y_test <- test_data[ , which(names(test_data) == "y")]
 f_len <- dim(X_train)[2]
 
 ### Fit a linear model using the training data.
-form <- paste(paste0("I(",names(df[3]), "*", names(df[4:5]),")"), collapse=" + ")
-i <- 4
-while(i < 5){
-  form <- paste(form,"+", paste(paste0("I(",names(df[i]), "*", names(df[5]),")"), collapse=" + "))
-  i <- i+1
-}
-form2 <- paste(paste0("I(",names(df[3:5]), "*", names(df[3:5]),")"), collapse=" + ")
-forma <- eval(paste("y ~", paste(paste0(names(df[1:f_len])), collapse=" + "), "+",form2, "+",form))
+forma <- eval(paste0("y ~ ", paste(names(df[4:f_len]), collapse=" + "),
+                     " + ",paste0("I(",names(df[4]),"*",names(df[f_len]),")")))
 model <- lm(forma, data = training_data)
 model$coefficients
 
@@ -53,18 +47,19 @@ loci <- function(original_model, FOI, X_test, Y_test, original_data, target){
   loci_y_test <- new_test_data[target]
 
   # Train the refitted model
-  forma <- eval(paste0(target, " ~ ", FOI, "+I(", FOI, "^2)"))
-  new_model <- lm(forma, data = new_training_data)
-
-  # Get the variance of Y (= MSE of null model)
-  var_y <- var(loci_y_test$y)
-
-  # Get the MSE for the model without the feature of interest.
-  preds_for_loci <- predict(new_model, loci_X_test)
-  loci_mse <- mean((loci_y_test$y - preds_for_loci) ^ 2)
-
-  ### LOCI is given by the differences of the MSEs.
-  var_y - loci_mse
+  variables <- names(loco_X_test)
+  outcome <- names(loco_y_test)
+  if(FOI %in% c("x4","x5")) {
+    forma <- eval(paste0(outcome," ~ ",FOI))
+    new_model <- lm(forma, data = new_training_data)
+    var_y <- var(loci_y_test$y)
+    preds_for_loci <- predict(new_model, loci_X_test)
+    loci_mse <- mean((loci_y_test$y - preds_for_loci) ^ 2)
+    result <- var_y - loci_mse
+  } else {
+    result <- 0
+  }
+  result
 }
 
 loci_naive <- function(original_data, original_model, X_test, Y_test, target, ...) {
