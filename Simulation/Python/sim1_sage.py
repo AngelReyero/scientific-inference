@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from sklearn import linear_model
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
 
@@ -24,6 +25,7 @@ savepath = ''
 # Example 1
 
 # reg_lin = linear_model.LinearRegression()
+rf = RandomForestRegressor()
 
 
 # datasets to use
@@ -39,13 +41,14 @@ X_train, y_train = df_train[xcolumns], df_train[ycolumn]
 X_test, y_test = df_test[xcolumns], df_test[ycolumn]
 
 # fit models
-reg_lin= smf.ols(formula='y ~ x1 + x2 + x3 + np.square(x3) + x4 + np.square(x4) + x5 + np.square(x5) + x3:x4 + x3:x5 + x4:x5', data=df_train).fit()
+# reg_lin= smf.ols(formula='y ~ x1 + x2 + x3 + np.square(x3) + x4 + np.square(x4) + x5 + np.square(x5) + x3:x4 + x3:x5 + x4:x5', data=df_train).fit()
+rf.fit(X_train, y_train)
 #reg_lin.params[9] = 0
 #reg_lin.params[10] = 0.2960963746
 
 scoring = [mean_squared_error, r2_score]
 names = ['MSE', 'r2_score']
-models = [reg_lin]
+models = [rf]
 m_names = ['LinearRegression']
 
 for kk in range(len(models)):
@@ -60,7 +63,7 @@ for kk in range(len(models)):
 sampler = GaussianSampler(X_train)
 
 sampler = GaussianSampler(X_train)
-wrk = Explainer(reg_lin.predict, X_train, loss=mean_squared_error, sampler=sampler)
+wrk = Explainer(rf.predict, X_train, loss=mean_squared_error, sampler=sampler)
 
 fsoi = list(X_train.columns)
 ex_sage = wrk.csagevfs(X_test, y_test, C='empty', nr_resample_marginalize=100)
@@ -102,7 +105,7 @@ df_sage_m2['type'] = 'marginal v(-j u j) - v(-j)'
 df_res2 = pd.concat([df_sage, df_sage2, df_sage_m, df_sage_m2]).reset_index()
 df_res2.to_csv(savepath+'df_res2.csv')
 
-print(reg_lin.params)
+print(rf.params)
 
 ## SAGE
 
