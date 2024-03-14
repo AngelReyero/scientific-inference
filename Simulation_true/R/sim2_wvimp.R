@@ -47,8 +47,8 @@ loci <- function(original_model, FOI, X_test, Y_test, original_data, target){
   loci_y_test <- new_test_data[target]
 
   # Train the refitted model
-  variables <- names(loco_X_test)
-  outcome <- names(loco_y_test)
+  variables <- names(loci_X_test)
+  outcome <- names(loci_y_test)
   if(FOI %in% c("x4","x5")) {
     forma <- eval(paste0(outcome," ~ ",FOI))
     new_model <- lm(forma, data = new_training_data)
@@ -115,3 +115,4 @@ res3$type = "loci"
 colnames(res3) = c("feature", "mean", "q.05", "q.95", "type")
 
 write.csv(res3, paste0(lp, 'df_res4.csv'))
+
