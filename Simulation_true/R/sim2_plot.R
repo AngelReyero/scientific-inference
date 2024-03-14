@@ -72,10 +72,10 @@ p = ggplot(data=df, aes(x=reorder(type, X), y=importance, fill=reorder(feature, 
 
 p = p + labs(x='IML technique', y='importance', fill='feature')
 # comment out scale_y_continuous in the following if you want "normal" scales
-p + coord_flip() + # scale_y_continuous(trans="S_sqrt",breaks=seq(-0.1,0.5,0.05))+
+p = p + coord_flip() + # scale_y_continuous(trans="S_sqrt",breaks=seq(-0.1,0.5,0.05))+
   scale_fill_discrete(breaks=c('x1', 'x2', 'x3', 'x4', 'x5'),
                       labels = c(expression(X[1]), expression(X[2]), expression(X[3]), expression(X[4]), expression(X[5])))
-
+(ptrue = p)
 
 # save relative values
 ggsave('Simulation_true/figures/cfi_pfi_SAGEvalueFunc_true.pdf', width=4, height=3)
