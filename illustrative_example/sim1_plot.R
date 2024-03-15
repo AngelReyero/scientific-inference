@@ -46,6 +46,8 @@ renameType = function(names) {
 }
 df$X = length(df$importance):1
 # expression(paste("RFI(", X[1], ", ", X[3], ")"))
+df$model[df$model == "LM"] = "a) LM with pair-wise interactions"
+df$model[df$model == "RF"] = "b) RF with default hyperparameters"
 
 p = ggplot(data = df, aes(x = reorder(type, X), y = importance, fill = reorder(feature, X))) +
   geom_bar(stat = 'identity', position = position_dodge()) +
