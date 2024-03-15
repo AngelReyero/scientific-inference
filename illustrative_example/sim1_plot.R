@@ -77,6 +77,6 @@ p = ggplot(data = df_max, aes(x = reorder(type, X), y = importance, fill = reord
   scale_fill_discrete(breaks = c('x1', 'x2', 'x3', 'x4', 'x5'),
     labels = c(expression(X[1]), expression(X[2]), expression(X[3]), expression(X[4]), expression(X[5]))) +
   facet_wrap(~model)
-p
+p + theme(legend.position = "bottom")
 
 ggsave('illustrative_example/illustrative_example.pdf', width = 5.7, height = 4)
