@@ -47,7 +47,7 @@ renameType = function(names) {
 df$X = length(df$importance):1
 # expression(paste("RFI(", X[1], ", ", X[3], ")"))
 df$model[df$model == "LM"] = "a) LM with pair-wise interactions"
-df$model[df$model == "RF"] = "b) RF with default hyperparameters"
+df$model[df$model == "RF"] = "b) RF (untuned)"
 
 p = ggplot(data = df, aes(x = reorder(type, X), y = importance, fill = reorder(feature, X))) +
   geom_bar(stat = 'identity', position = position_dodge()) +
@@ -74,11 +74,11 @@ p = ggplot(data = df_max, aes(x = reorder(type, X), y = importance, fill = reord
   geom_bar(stat = 'identity', position = position_dodge()) +
   #geom_errorbar(aes(ymin = q.05, ymax = q.95), width = .2, position = position_dodge(.9)) +
   scale_x_discrete(labels = renameType) +
-  labs(x = 'IML technique', y = 'importance', fill = 'feature') +
+  labs(x = '', y = 'importance', fill = 'feature') +
   coord_flip() + # scale_y_continuous(trans = "S_sqrt", breaks = seq(-0.1,0.5,0.05))+
   scale_fill_discrete(breaks = c('x1', 'x2', 'x3', 'x4', 'x5'),
     labels = c(expression(X[1]), expression(X[2]), expression(X[3]), expression(X[4]), expression(X[5]))) +
-  facet_wrap(~model)
+  facet_wrap(~model, scales = "free_x")
 p + theme(legend.position = "bottom")
 
-ggsave('illustrative_example/illustrative_example.pdf', width = 5.7, height = 4)
+ggsave('illustrative_example/illustrative_example.pdf', width = 5, height = 3.4)
