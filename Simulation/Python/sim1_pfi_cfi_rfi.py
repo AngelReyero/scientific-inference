@@ -89,7 +89,8 @@ plt.show()
 df_rfi = ex_rfi.fi_means_quantiles()
 df_rfi['type'] = 'rfi' """
 
-df_res = pd.concat([df_pfi, df_cfi, df_rfi]).reset_index()
+# df_res = pd.concat([df_pfi, df_cfi, df_rfi]).reset_index()
+df_res = pd.concat([df_pfi, df_cfi]).reset_index()
 df_res.to_csv(savepath+'df_res.csv')
 
-print(rf.params)
+# print(rf.params)

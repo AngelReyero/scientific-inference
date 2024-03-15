@@ -105,7 +105,7 @@ df_sage_m2['type'] = 'marginal v(-j u j) - v(-j)'
 df_res2 = pd.concat([df_sage, df_sage2, df_sage_m, df_sage_m2]).reset_index()
 df_res2.to_csv(savepath+'df_res2.csv')
 
-print(rf.params)
+# print(rf.params)
 
 ## SAGE
 
