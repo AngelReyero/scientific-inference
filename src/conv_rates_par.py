@@ -40,7 +40,7 @@ def main(args):
         n_cal=100
         n_jobs=10
 
-        best_model= 'fast_gradBoost' #'gradBoost' # 'rf'
+        best_model= 'rf' #'gradBoost' #  'fast_gradBoost'
         dict_model=None
 
         rng = np.random.RandomState(s)
