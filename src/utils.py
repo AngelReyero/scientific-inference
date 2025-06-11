@@ -19,6 +19,10 @@ from sklearn.model_selection import RandomizedSearchCV
 from scipy.stats import uniform, randint
 from sklearn.preprocessing import PolynomialFeatures
 
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import make_pipeline
+
 
 def hypertune_predictor(estimator, X, y, param_grid, n_jobs=10):
     """
@@ -412,5 +416,233 @@ def bootstrap_var(imp_list, n_groups=30, size_group=50):
     """
     estim_imp = [np.mean(random.choices(imp_list, k=size_group)) for _ in range(n_groups)]
     return np.var(estim_imp)
+
+
+
+
+
+
+
+def best_mod_cat(X_train, y_train, seed=2025, n_jobs=10, verbose=False, regressor=None, dict_reg=None, super_learner=False):
+    """
+    Find the best predictive model by hyperparameter tuning multiple regressors.
+
+    Parameters:
+    -----------
+    X_train : ndarray
+        Training feature matrix.
+    y_train : ndarray
+        Training target variable.
+    seed : int, optional (default=2024)
+        Random seed for reproducibility.
+    n_jobs : int, optional (default=10)
+        Number of parallel jobs.
+    verbose : bool, optional (default=False)
+        Whether to print additional information.
+    regressor : sklearn estimator, optional (default=None)
+        If specified, only this regressor will be tuned.
+    dict_reg : dict, optional (default=None)
+        Hyperparameter grid for the provided regressor.
+    super_learner : bool, optional (default=False)
+        Whether to use a stacked ensemble learning approach.
+
+    Returns:
+    --------
+    best_model : sklearn estimator
+        The best performing model.
+    best_score : float (if verbose=True)
+        The best score achieved.
+    """
+    # Identify categorical columns
+    categorical_cols = X_train.select_dtypes(include=['object', 'category']).columns.tolist()
+
+    # Column transformer to one-hot encode categorical columns
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_cols)
+        ],
+        remainder='passthrough'  # keep the remaining numerical columns
+    )
+
+    
+
+    if super_learner:
+        # Define base estimators
+        estimators = [
+            ('rf', RandomForestRegressor(random_state=seed)),
+            ('lasso', Lasso()),
+            ('svr', SVR()),
+            ('hgb', HistGradientBoostingRegressor(random_state=seed))
+        ]
+
+        # Define hyperparameter grid for stacking model
+        param_grid = {
+            'rf__n_estimators': randint(50, 500),
+            'rf__max_depth': [3, 6, 10],
+            'lasso__alpha': uniform(0.001, 1.0),
+            'svr__C': uniform(0.1, 100),
+            'svr__kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
+            'svr__gamma': ['scale', 'auto'],
+            'hgb__max_iter': randint(100, 1000),
+            'hgb__learning_rate': uniform(0.01, 0.3),
+            'final_estimator__alpha': uniform(0.1, 10)
+        }
+
+        # Stacking Regressor with Ridge as final estimator
+        stacking_regressor = StackingRegressor(estimators=estimators, final_estimator=Ridge())
+
+        # Hyperparameter tuning using RandomizedSearchCV
+        random_search = RandomizedSearchCV(
+            stacking_regressor, param_distributions=param_grid,
+            n_iter=50, cv=5, random_state=seed, n_jobs=n_jobs
+        )
+        model = make_pipeline(
+            preprocessor,
+            random_search
+        )
+        model.fit(X_train, y_train)
+
+        # Access fitted RandomizedSearchCV inside the pipeline
+        fitted_search = model.named_steps['randomizedsearchcv']
+
+        # Get the best model and score
+        best_model = fitted_search.best_estimator_
+        best_score = fitted_search.best_score_
+
+        return (model, best_score) if verbose else model
+    if regressor == 'rf':
+        model = RandomForestRegressor(random_state=seed)
+        param_grid={
+                'n_estimators': [100, 200],
+                'max_depth': [None, 10, 30],
+                'min_samples_split': [2, 10],
+                'min_samples_leaf': [1, 4],
+                'max_features': ['log2', 'sqrt'],
+                'bootstrap': [True]
+            }
+
+        grid_search = GridSearchCV(model, param_grid=param_grid, cv=5, n_jobs=n_jobs)
+        model_pipeline = make_pipeline(preprocessor, grid_search)
+        model_pipeline.fit(X_train, y_train)
+        best_model = model_pipeline.named_steps['gridsearchcv'].best_estimator_
+        best_score = model_pipeline.named_steps['gridsearchcv'].best_score_
+
+        # Return the result
+        return (model_pipeline, best_score) if verbose else model_pipeline
+    elif regressor =='xgboost':
+        from xgboost import XGBRegressor
+        model = XGBRegressor(random_state=seed)
+        param_grid =  {
+                'n_estimators': [100, 300],
+                'learning_rate': [0.01, 0.1],
+                'max_depth': [3, 7],
+                'min_child_weight': [1, 5],
+                'subsample': [0.8, 1.0],
+                'colsample_bytree': [0.8, 1.0],
+                'gamma': [0, 0.1]
+            }
+        tuned_model, score = hypertune_predictor(model, X_train, y_train, param_grid, n_jobs=n_jobs)
+        return tuned_model
+    elif regressor == 'gradBoost':
+        model = GradientBoostingRegressor(random_state=seed)
+
+        # Define the hyperparameter grid
+        param_grid = {
+            'n_estimators': [100, 300],
+            'learning_rate': [0.01, 0.1],
+            'max_depth': [3, 7],
+            'min_samples_split': [2, 10],
+            'min_samples_leaf': [1, 4],
+            'subsample': [0.8, 1.0],
+            'loss': ['squared_error', 'huber']
+        }
+        grid_search = GridSearchCV(model, param_grid=param_grid, cv=5, n_jobs=n_jobs)
+        model_pipeline = make_pipeline(preprocessor, grid_search)
+        model_pipeline.fit(X_train, y_train)
+        best_model = model_pipeline.named_steps['gridsearchcv'].best_estimator_
+        best_score = model_pipeline.named_steps['gridsearchcv'].best_score_
+
+        # Return the result
+        return (model_pipeline, best_score) if verbose else model_pipeline
+    elif regressor == 'fast_gradBoost':
+        param_grid = {
+            'n_estimators': list(np.arange(100, 500, 100)),  # [100, 200, 300, 400]
+            'learning_rate': list(np.arange(0.01, 0.1, 0.05))  # [0.01, 0.06]
+        }
+        grid_search = GridSearchCV(GradientBoostingRegressor(loss = 'squared_error', max_depth = 3), param_grid = param_grid, cv = 5, n_jobs=n_jobs)
+        model = make_pipeline(
+            preprocessor,
+            grid_search
+        )
+        model.fit(X_train, y_train)
+        return model
+    elif regressor is not None:
+        model, score = hypertune_predictor(regressor, X_train, y_train, dict_reg, n_jobs=n_jobs)
+        return (model, score) if verbose else model
+    from xgboost import XGBRegressor
+    # List of models and their parameter grids
+    models_param_grids = {
+        "RandomForest": (
+            RandomForestRegressor(random_state=seed),
+            {
+                'n_estimators': [100, 200],
+                'max_depth': [None, 10, 30],
+                'min_samples_split': [2, 10],
+                'min_samples_leaf': [1, 4],
+                'max_features': ['log2', 'sqrt'],
+                'bootstrap': [True]
+            }
+        ),
+        "GradientBoosting": (
+            GradientBoostingRegressor(random_state=seed),
+            {
+                'n_estimators': [100, 300],
+                'learning_rate': [0.01, 0.1],
+                'max_depth': [3, 7],
+                'min_samples_split': [2, 10],
+                'min_samples_leaf': [1, 4],
+                'subsample': [0.8, 1.0],
+                'loss': ['squared_error', 'huber']
+            }
+        ),
+        "XGBoost": (
+            XGBRegressor(random_state=seed),
+            {
+                'n_estimators': [100, 300],
+                'learning_rate': [0.01, 0.1],
+                'max_depth': [3, 7],
+                'min_child_weight': [1, 5],
+                'subsample': [0.8, 1.0],
+                'colsample_bytree': [0.8, 1.0],
+                'gamma': [0, 0.1]
+            }
+        ),
+        "Lasso": (
+            Lasso(random_state=seed),
+            {
+                'alpha': [0.0001, 0.001, 0.01, 0.1, 1, 10, 100],
+                'max_iter': [1000, 5000, 10000],
+                'tol': [1e-4, 1e-3, 1e-2]
+            }
+        )
+    }
+
+    best_model, best_score = None, float('-inf')
+    results = {}
+
+    for model_name, (model, param_grid) in models_param_grids.items():
+        tuned_model, score = hypertune_predictor(model, X_train, y_train, param_grid, n_jobs=n_jobs)
+        results[model_name] = (tuned_model, score)
+        print(f"{model_name} score: {score}")
+
+        if score > best_score:
+            best_model, best_score = tuned_model, score
+
+    print(f"Best model: {best_model.__class__.__name__} with score {best_score}")
+    
+    return (best_model, best_score) if verbose else best_model
+
+
+
 
     
