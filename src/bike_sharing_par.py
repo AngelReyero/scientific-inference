@@ -74,10 +74,12 @@ def main(args):
         y_test_df = pd.DataFrame(y_test)
         y_train_df = pd.DataFrame(y_train)  
         p = X.shape[1]
+        print(p)
+        print(X.columns)
         y_method = "bike"
         super_learner=False
         n_jobs=10
-        best_model= 'rf' #'gradBoost' #  'fast_gradBoost'
+        best_model= 'rf'#'fast_gradBoost'#'rf' #'gradBoost' #  
         dict_model=None
 
         rng = np.random.RandomState(s)
@@ -232,17 +234,17 @@ def main(args):
             f_res1["mse"]=mse
             f_res1["r2"]=r2_sc
             for k in range(p):
-                f_res1["imp_V"+str(k)]=importance_score[i, j, k]
+                f_res1["imp_V"+str(k)]=importance_score[i, k]
             f_res1=pd.DataFrame(f_res1)
             f_res=pd.concat([f_res, f_res1], ignore_index=True)
         if super_learner:
-            csv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), f"../results/csv/conv_rates/{y_method}_super_seed{s}.csv"))
+            csv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), f"../results/csv/conv_rates/bike_{y_method}_super_seed{s}.csv"))
             f_res.to_csv(
             csv_path,
             index=False,
             ) 
         else:
-            csv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), f"../results/csv/conv_rates/{y_method}_model{best_model}_seed{s}.csv"))
+            csv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), f"../results/csv/conv_rates/bike_{y_method}_model{best_model}_seed{s}.csv"))
             f_res.to_csv(
             csv_path,
             index=False,

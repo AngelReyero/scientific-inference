@@ -26,7 +26,7 @@ methods = [
 features = [f'X{i}' for i in range(10)]
 
 y_method = "fixed_poly"
-best_model='fast_gradBoost'#'rf'# #
+best_model='rf'#'fast_gradBoost'#'rf'# #
 p=10
 cor=0.6
 n=5000
