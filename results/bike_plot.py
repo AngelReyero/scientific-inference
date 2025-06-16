@@ -26,7 +26,7 @@ methods = [
 features = [f'X{i}' for i in range(10)]
 p=10
 y_method = "bike"
-best_model='fast_gradBoost'#'rf'#'fast_gradBoost'#'rf'# #
+best_model='rf'#'fast_gradBoost'##'fast_gradBoost'#'rf'# #
 csv_files = glob.glob(f"csv/conv_rates/bike_{y_method}_model{best_model}_seed*.csv")
 df = pd.concat((pd.read_csv(f) for f in csv_files), ignore_index=True)
 
