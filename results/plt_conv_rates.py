@@ -151,11 +151,12 @@ def main():
 
     null_imp = []
     # Iterate through each row of the DataFrame
+    indices_to_use = [2, 3, 5, 6, 9]
+
     for index, row in df.iterrows():
         y_pred = row.filter(like="imp_V").values
-        y=row.filter(like="tr_V").values
-        y = np.array(y).astype(int) 
-        null_imp.append(np.mean(abs(y_pred[y==0])))
+        selected_values = [abs(y_pred[i]) for i in indices_to_use if i < len(y_pred)]
+        null_imp.append(np.mean(selected_values))
 
     
     df['null_imp'] = null_imp

@@ -68,12 +68,12 @@ df_long = pd.melt(filtered_df, id_vars='method',
                   var_name='Variable', value_name='Importance')
 
 # Optional: clean up variable names (e.g., 'imp_V1' -> 'V1')
-df_long['Variable'] = df_long['Variable'].str.replace('imp_', '')
+df_long['Variable'] = df_long['Variable'].str.replace('imp_V', 'X')
 
 # Plot
 plt.figure(figsize=(12, 6))
 ax = sns.boxplot(data=df_long, x='Variable', y='Importance', hue='method', palette=palette)
-green_vars = {'V0', 'V1', 'V4', 'V7', 'V8'}
+green_vars = {'X0', 'X1', 'X4', 'X7', 'X8'}
 for label in ax.get_xticklabels():
     var_name = label.get_text()
     label.set_color('green' if var_name in green_vars else 'red')
@@ -111,7 +111,11 @@ ax.tick_params(axis='x', labelsize=18)
 ax.tick_params(axis='y', labelsize=18)
 plt.ylabel('Importance', fontsize=20)
 plt.xlabel('Variables', fontsize=20)
-plt.legend(title='Method',  loc='upper right', fontsize=16, title_fontsize=18, ncol=2)#bbox_to_anchor=(1.05, 1),
+if best_model=='fast_gradBoost':
+    plt.legend(title='Method',  loc='upper right', fontsize=16, title_fontsize=18, ncol=2)#bbox_to_anchor=(1.05, 1),
+else: 
+    plt.legend(title='Method',  loc='upper right', fontsize=16, title_fontsize=18, ncol=1, bbox_to_anchor=(1.35, 1))#bbox_to_anchor=(1.05, 1),
+
 plt.tight_layout()
 plt.savefig(f"figures/boxplot_{y_method}_p{p}_cor{cor}_model{best_model}.pdf", bbox_inches="tight")
 
@@ -119,18 +123,18 @@ plt.savefig(f"figures/boxplot_{y_method}_p{p}_cor{cor}_model{best_model}.pdf", b
 
 
 
-
+# Reduced boxplot
 df_long = pd.melt(filtered_df, id_vars='method', 
                   value_vars=[f'imp_V{i}' for i in [0, 2]],
                   var_name='Variable', value_name='Importance')
 
 # Optional: clean up variable names (e.g., 'imp_V1' -> 'V1')
-df_long['Variable'] = df_long['Variable'].str.replace('imp_', '')
+df_long['Variable'] = df_long['Variable'].str.replace('imp_V', 'X')
 
 # Plot
 plt.figure(figsize=(12, 6))
 ax = sns.boxplot(data=df_long, x='Variable', y='Importance', hue='method', palette=palette)
-green_vars = {'V0', 'V1', 'V4', 'V7', 'V8'}
+green_vars = {'X0', 'X1', 'X4', 'X7', 'X8'}
 for label in ax.get_xticklabels():
     var_name = label.get_text()
     label.set_color('green' if var_name in green_vars else 'red')
